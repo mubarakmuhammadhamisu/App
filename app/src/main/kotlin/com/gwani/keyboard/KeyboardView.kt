@@ -57,6 +57,21 @@ class KeyboardView(context: Context) : View(context) {
     private var pressedKey: Key? = null
 
     // -----------------------------------------------------------
+    // onMeasure
+    // Android calls this to ask: "how big do you want to be?"
+    // We answer with full screen width and exactly 5 rows × 52dp height.
+    // The IME framework then builds a window that exact size
+    // and docks it to the bottom of the screen automatically.
+    // Without this, Android guesses the size and gets it wrong.
+    // -----------------------------------------------------------
+    override fun onMeasure(widthMeasureSpec: Int, heightMeasureSpec: Int) {
+        val density = resources.displayMetrics.density
+        val desiredHeight = (260f * density).toInt() // 5 rows × 52dp
+        val width = MeasureSpec.getSize(widthMeasureSpec)
+        setMeasuredDimension(width, desiredHeight)
+    }
+
+    // -----------------------------------------------------------
     // DRAWING
     // Android calls onDraw() whenever the keyboard needs to be redrawn.
     // -----------------------------------------------------------

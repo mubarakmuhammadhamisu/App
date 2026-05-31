@@ -24,9 +24,14 @@ class KeyboardView(context: Context) : View(context) {
         color = Color.parseColor("#4C4C4E")
     }
 
-    // Blue paint for shift key when shift is active
+    // Blue — shift active (one capital coming)
     private val shiftActivePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
         color = Color.parseColor("#0A84FF")
+    }
+
+    // Orange — caps lock active (all capitals locked)
+    private val capsActivePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        color = Color.parseColor("#FF9F0A")
     }
 
     private val textPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
@@ -48,8 +53,11 @@ class KeyboardView(context: Context) : View(context) {
     // The key currently being pressed by the finger
     private var pressedKey: Key? = null
 
-    // Whether shift is currently ON
-    private var isShifted = false
+    // Shift has three states:
+    // 0 = normal    — lowercase
+    // 1 = shift     — next letter typed is capital, then back to normal
+    // 2 = caps lock — all letters stay capital until shift tapped again
+    private var shiftState = 0
 
     // Handler runs on main UI thread — used for backspace long press
     private val handler = Handler(Looper.getMainLooper())
@@ -85,16 +93,17 @@ class KeyboardView(context: Context) : View(context) {
 
             // Pick the correct background color for this key
             val brush = when {
-                key == pressedKey                  -> pressedPaint
-                key.output == "shift" && isShifted -> shiftActivePaint
-                else                               -> keyPaint
+                key == pressedKey                     -> pressedPaint
+                key.output == "shift" && shiftState == 1 -> shiftActivePaint
+                key.output == "shift" && shiftState == 2 -> capsActivePaint
+                else                                  -> keyPaint
             }
 
             canvas.drawRoundRect(rect, 12f, 12f, brush)
 
-            // Show uppercase labels when shift is ON
+            // Show uppercase labels when shift or caps lock is ON
             val displayLabel = when {
-                isShifted && key.label.length == 1 && key.label[0].isLetter() ->
+                shiftState > 0 && key.label.length == 1 && key.label[0].isLetter() ->
                     key.label.uppercase()
                 else -> key.label
             }
@@ -197,7 +206,12 @@ class KeyboardView(context: Context) : View(context) {
             "space" -> ic.commitText(" ", 1)
 
             "shift" -> {
-                isShifted = !isShifted
+                // Cycle: normal(0) → shift(1) → caps lock(2) → normal(0)
+                shiftState = when (shiftState) {
+                    0    -> 1
+                    1    -> 2
+                    else -> 0
+                }
                 invalidate()
             }
 
@@ -205,10 +219,12 @@ class KeyboardView(context: Context) : View(context) {
             "numbers" -> { }
 
             else -> {
-                val output = if (isShifted) key.output.uppercase() else key.output
+                val output = if (shiftState > 0) key.output.uppercase() else key.output
                 ic.commitText(output, 1)
-                if (isShifted) {
-                    isShifted = false
+                // After typing one letter in shift mode, go back to normal
+                // Caps lock (state 2) stays on until shift is tapped
+                if (shiftState == 1) {
+                    shiftState = 0
                     invalidate()
                 }
             }

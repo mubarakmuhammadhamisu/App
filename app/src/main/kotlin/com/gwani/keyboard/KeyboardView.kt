@@ -47,6 +47,11 @@ class KeyboardView(context: Context) : View(context) {
         textAlign = Paint.Align.CENTER
     }
 
+    // Stores current keyboard height in pixels
+    // Set in onMeasure, read in calculateKeyPositions
+    // Both functions stay in sync this way
+    private var keyboardHeight = 0
+
     // List of every key paired with its rectangle (position + size)
     private val keyRects = mutableListOf<Pair<Key, RectF>>()
 
@@ -78,12 +83,10 @@ class KeyboardView(context: Context) : View(context) {
     // 5 rows x 52dp = 260dp — the IME window wraps this and docks to bottom
     override fun onMeasure(widthMeasureSpec: Int, heightMeasureSpec: Int) {
         val density = resources.displayMetrics.density
-        // Ask GwaniIME for correct height based on current orientation
-        // Falls back to 260dp if ime is not yet connected
-        val desiredHeight = ime?.getKeyboardHeight()
+        keyboardHeight = ime?.getKeyboardHeight()
             ?: (260f * density).toInt()
         val width = MeasureSpec.getSize(widthMeasureSpec)
-        setMeasuredDimension(width, desiredHeight)
+        setMeasuredDimension(width, keyboardHeight)
     }
 
     // onDraw is called by Android whenever the keyboard needs to be redrawn
@@ -124,8 +127,10 @@ class KeyboardView(context: Context) : View(context) {
         keyRects.clear()
 
         val gap = 8f
-        val density = resources.displayMetrics.density
-        val rowHeight = 52f * density
+        // Row height = total keyboard height divided by number of rows
+        // This makes rows always fill the keyboard exactly
+        // regardless of orientation or screen size
+        val rowHeight = keyboardHeight / BaseLayer.rows.size.toFloat()
 
         for ((rowIndex, row) in BaseLayer.rows.withIndex()) {
             val rowTop    = rowIndex * rowHeight + gap / 2f
@@ -159,7 +164,7 @@ class KeyboardView(context: Context) : View(context) {
                 if (key?.output == "delete") {
                     handler.postDelayed({
                         isLongPressing = true
-                        handler.post(deleteRunnable)
+                        handler.postDelayed(deleteRunnable, 50)
                     }, 400)
                 }
 

@@ -4,11 +4,11 @@ plugins {
 }
 
 android {
-    namespace 'com.gwani.keyboard'
+    namespace 'com.titecx.keyboard'
     compileSdk 34
 
     defaultConfig {
-        applicationId "com.gwani.keyboard"
+        applicationId "com.titecx.keyboard"
         minSdk 21
         targetSdk 34
         versionCode 1
